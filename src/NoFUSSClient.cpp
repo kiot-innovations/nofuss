@@ -124,7 +124,7 @@ bool NoFUSSClientClass::_checkUpdates() {
 
 void NoFUSSClientClass::_doUpdate() {
 
-    char url[100];
+    char url[200];
     bool error = false;
     uint8_t updates = 0;
 
