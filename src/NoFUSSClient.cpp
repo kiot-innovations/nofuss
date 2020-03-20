@@ -35,6 +35,10 @@ void NoFUSSClientClass::setVersion(String version) {
     _version = version;
 }
 
+void NoFUSSClientClass::setBuild(String build) {
+    _build = build;
+}
+
 void NoFUSSClientClass::onMessage(TMessageFunction fn) {
     _callback = fn;
 }
@@ -68,7 +72,13 @@ String NoFUSSClientClass::_getPayload() {
     String payload = "";
 
     HTTPClient http;
-    http.begin((char *) _server.c_str());
+    #ifdef HTTPUPDATE_1_2_COMPATIBLE
+        http.begin((char *) _server.c_str());
+    #else
+        WiFiClient client;
+        http.begin(client, (char *) _server.c_str());
+    #endif
+
     http.useHTTP10(true);
     http.setReuse(false);
     http.setTimeout(HTTP_TIMEOUT);
@@ -76,6 +86,7 @@ String NoFUSSClientClass::_getPayload() {
     http.addHeader(F("X-ESP8266-MAC"), WiFi.macAddress());
     http.addHeader(F("X-ESP8266-DEVICE"), _device);
     http.addHeader(F("X-ESP8266-VERSION"), _version);
+    http.addHeader(F("X-ESP8266-BUILD"), _build);
     http.addHeader(F("X-ESP8266-CHIPID"), String(ESP.getChipId()));
     http.addHeader(F("X-ESP8266-CHIPSIZE"), String(ESP.getFlashChipRealSize()));
 
@@ -133,8 +144,18 @@ void NoFUSSClientClass::_doUpdate() {
     if (_newFileSystem.length() > 0) {
 
         // Update SPIFFS
-        sprintf(url, "%s/%s", _server.c_str(), _newFileSystem.c_str());
-        t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(url);
+        if (_newFileSystem.startsWith("http")) {
+            sprintf(url, "%s", _newFileSystem.c_str());
+        } else {
+            sprintf(url, "%s%s", _server.c_str(), _newFileSystem.c_str()); // NOTE THAT THIS IS DIFFERENT FROM XOSEPEREZ HERE - Zoseperzx has %s/%s here, while we use %s%s. Because we send the url which starts with a slash. 
+        }
+
+        #ifdef HTTPUPDATE_1_2_COMPATIBLE
+            t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(url);
+        #else
+            WiFiClient client;
+            t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(client, url);
+        #endif
 
         if (ret == HTTP_UPDATE_FAILED) {
             error = true;
@@ -151,8 +172,18 @@ void NoFUSSClientClass::_doUpdate() {
     if (!error && (_newFirmware.length() > 0)) {
 
         // Update binary
-        sprintf(url, "%s%s", _server.c_str(), _newFirmware.c_str());
-        t_httpUpdate_return ret = ESPhttpUpdate.update(url);
+        if (_newFirmware.startsWith("http")) {
+            sprintf(url, "%s", _newFirmware.c_str());
+        } else {
+            sprintf(url, "%s%s", _server.c_str(), _newFirmware.c_str()); // NOTE THAT THIS IS DIFFERENT FROM XOSEPEREZ HERE - Zoseperzx has %s/%s here, while we use %s%s. Because we send the url which starts with a slash. 
+        }
+
+        #ifdef HTTPUPDATE_1_2_COMPATIBLE
+            t_httpUpdate_return ret = ESPhttpUpdate.update(url);
+        #else
+            WiFiClient client;
+            t_httpUpdate_return ret = ESPhttpUpdate.update(client, url);
+        #endif
 
         if (ret == HTTP_UPDATE_FAILED) {
             error = true;
