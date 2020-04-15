@@ -70,12 +70,13 @@ void NoFUSSClientClass::_doCallback(nofuss_t message) {
 String NoFUSSClientClass::_getPayload() {
 
     String payload = "";
-
-    HTTPClient http;
-    #ifdef HTTPUPDATE_1_2_COMPATIBLE
+    #if HTTPUPDATE_1_2_COMPATIBLE
+        HTTPClient http;
         http.begin((char *) _server.c_str());
     #else
+        // This order of declaration of HttpClient after Wifi client is important. Otherwise it'll crash.  
         WiFiClient client;
+        HTTPClient http;
         http.begin(client, (char *) _server.c_str());
     #endif
 
@@ -150,7 +151,7 @@ void NoFUSSClientClass::_doUpdate() {
             sprintf(url, "%s%s", _server.c_str(), _newFileSystem.c_str()); // NOTE THAT THIS IS DIFFERENT FROM XOSEPEREZ HERE - Zoseperzx has %s/%s here, while we use %s%s. Because we send the url which starts with a slash. 
         }
 
-        #ifdef HTTPUPDATE_1_2_COMPATIBLE
+        #if HTTPUPDATE_1_2_COMPATIBLE
             t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(url);
         #else
             WiFiClient client;
@@ -178,7 +179,7 @@ void NoFUSSClientClass::_doUpdate() {
             sprintf(url, "%s%s", _server.c_str(), _newFirmware.c_str()); // NOTE THAT THIS IS DIFFERENT FROM XOSEPEREZ HERE - Zoseperzx has %s/%s here, while we use %s%s. Because we send the url which starts with a slash. 
         }
 
-        #ifdef HTTPUPDATE_1_2_COMPATIBLE
+        #if HTTPUPDATE_1_2_COMPATIBLE
             t_httpUpdate_return ret = ESPhttpUpdate.update(url);
         #else
             WiFiClient client;
