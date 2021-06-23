@@ -19,7 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <Arduino.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#include <esp_wifi.h>
+#endif
+
 #include "NoFUSSClient.h"
 #include "credentials.h"
 
@@ -46,7 +52,7 @@ void nofussSetup() {
     NoFUSSClient.setServer(NOFUSS_SERVER);
     NoFUSSClient.setDevice(DEVICE);
     NoFUSSClient.setVersion(VERSION);
-     NoFUSSClient.setBuild(BUILD);
+    NoFUSSClient.setBuild(BUILD);
 
     NoFUSSClient.onMessage([](nofuss_t code) {
 

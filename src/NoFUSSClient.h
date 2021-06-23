@@ -24,7 +24,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <functional>
 #include <Stream.h>
 #include <ArduinoJson.h>
-#include <ESP8266httpUpdate.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+  #include <ESP8266httpUpdate.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+  #include <HTTPUpdate.h>
+#endif
+
 
 typedef enum {
     NOFUSS_START,

@@ -21,7 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "NoFUSSClient.h"
 #include <functional>
 #include <ArduinoJson.h>
-#include <ESP8266httpUpdate.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+    #include <ESP8266httpUpdate.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+    #include <HTTPClient.h>
+    #include <HTTPUpdate.h>
+#endif
+
 
 void NoFUSSClientClass::setServer(String server) {
     _server = server;
@@ -84,12 +90,14 @@ String NoFUSSClientClass::_getPayload() {
     http.setReuse(false);
     http.setTimeout(HTTP_TIMEOUT);
     http.setUserAgent(F(HTTP_USERAGENT));
-    http.addHeader(F("X-ESP8266-MAC"), WiFi.macAddress());
-    http.addHeader(F("X-ESP8266-DEVICE"), _device);
-    http.addHeader(F("X-ESP8266-VERSION"), _version);
-    http.addHeader(F("X-ESP8266-BUILD"), _build);
-    http.addHeader(F("X-ESP8266-CHIPID"), String(ESP.getChipId()));
-    http.addHeader(F("X-ESP8266-CHIPSIZE"), String(ESP.getFlashChipRealSize()));
+    http.addHeader(F("X-ESP32-MAC"), WiFi.macAddress());
+    http.addHeader(F("X-ESP32-DEVICE"), _device);
+    http.addHeader(F("X-ESP32-VERSION"), _version);
+    http.addHeader(F("X-ESP32-BUILD"), _build);
+    #if defined(ARDUINO_ARCH_ESP8266)
+        http.addHeader(F("X-ESP32-CHIPID"), String(ESP.getChipId()));
+        http.addHeader(F("X-ESP32-CHIPSIZE"), String(ESP.getFlashChipRealSize()));
+    #endif
 
     int httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
@@ -139,8 +147,11 @@ void NoFUSSClientClass::_doUpdate() {
     char url[200];
     bool error = false;
     uint8_t updates = 0;
-
+    #if defined(ARDUINO_ARCH_ESP8266)
     ESPhttpUpdate.rebootOnUpdate(false);
+    #elif defined(ARDUINO_ARCH_ESP32)
+    httpUpdate.rebootOnUpdate(false);
+    #endif
 
     if (_newFileSystem.length() > 0) {
 
@@ -152,16 +163,28 @@ void NoFUSSClientClass::_doUpdate() {
         }
 
         #if HTTPUPDATE_1_2_COMPATIBLE
-            t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(url);
+        #if defined(ARDUINO_ARCH_ESP8266)
+        t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(url);
+        #elif defined(ARDUINO_ARCH_ESP32)
+        t_httpUpdate_return ret = httpUpdate.updateSpiffs(url);
+        #endif
+
+
+            
         #else
             WiFiClient client;
-            t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(client, url);
+            t_httpUpdate_return ret = httpUpdate.updateSpiffs(client, url);
         #endif
 
         if (ret == HTTP_UPDATE_FAILED) {
             error = true;
+            #if defined(ARDUINO_ARCH_ESP8266)
             _errorNumber = ESPhttpUpdate.getLastError();
             _errorString = ESPhttpUpdate.getLastErrorString();
+            #elif defined(ARDUINO_ARCH_ESP32)
+            _errorNumber = httpUpdate.getLastError();
+            _errorString = httpUpdate.getLastErrorString();
+            #endif
             _doCallback(NOFUSS_FILESYSTEM_UPDATE_ERROR);
         } else if (ret == HTTP_UPDATE_OK) {
             updates++;
@@ -180,16 +203,32 @@ void NoFUSSClientClass::_doUpdate() {
         }
 
         #if HTTPUPDATE_1_2_COMPATIBLE
+        #if defined(ARDUINO_ARCH_ESP8266)
             t_httpUpdate_return ret = ESPhttpUpdate.update(url);
+        #elif defined(ARDUINO_ARCH_ESP32)
+            t_httpUpdate_return ret = httpUpdate.update(url);
+        #endif
+
         #else
             WiFiClient client;
-            t_httpUpdate_return ret = ESPhttpUpdate.update(client, url);
+            #if defined(ARDUINO_ARCH_ESP8266)
+            t_httpUpdate_return ret = ESPHttpUpdate.update(client, url);
+            #elif defined(ARDUINO_ARCH_ESP32)
+            t_httpUpdate_return ret = httpUpdate.update(client, url);
+            #endif
+
         #endif
 
         if (ret == HTTP_UPDATE_FAILED) {
             error = true;
-            _errorNumber = ESPhttpUpdate.getLastError();
-            _errorString = ESPhttpUpdate.getLastErrorString();
+             #if defined(ARDUINO_ARCH_ESP8266)
+            _errorNumber = ESPHttpUpdate.getLastError();
+            _errorString = ESPHttpUpdate.getLastErrorString();
+            #elif defined(ARDUINO_ARCH_ESP32)
+            _errorNumber = httpUpdate.getLastError();
+            _errorString = httpUpdate.getLastErrorString();
+            #endif
+
             _doCallback(NOFUSS_FIRMWARE_UPDATE_ERROR);
         } else if (ret == HTTP_UPDATE_OK) {
             updates++;
