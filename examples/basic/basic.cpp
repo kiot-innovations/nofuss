@@ -19,7 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <Arduino.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#include <esp_wifi.h>
+#endif
+
 #include "NoFUSSClient.h"
 #include "credentials.h"
 
@@ -32,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define DEVICE                  "TEST"
 #define VERSION                 "0.0.9"
+#define BUILD                   ""
 #define NOFUSS_INTERVAL         10000
 #define WIFI_CONNECT_TIMEOUT    20000
 #define WIFI_RECONNECT_DELAY    5000
@@ -45,6 +52,7 @@ void nofussSetup() {
     NoFUSSClient.setServer(NOFUSS_SERVER);
     NoFUSSClient.setDevice(DEVICE);
     NoFUSSClient.setVersion(VERSION);
+    NoFUSSClient.setBuild(BUILD);
 
     NoFUSSClient.onMessage([](nofuss_t code) {
 
@@ -96,8 +104,8 @@ void nofussSetup() {
 }
 
 void nofussLoop() {
-    static unsigned long last_check = 0;
     if (WiFi.status() != WL_CONNECTED) return;
+     static unsigned long last_check = 0;
     if ((last_check > 0) && ((millis() - last_check) < NOFUSS_INTERVAL)) return;
     last_check = millis();
     NoFUSSClient.handle();
