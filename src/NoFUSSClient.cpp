@@ -119,10 +119,9 @@ bool NoFUSSClientClass::_checkUpdates() {
         _doCallback(NOFUSS_NO_RESPONSE_ERROR);
         return false;
     }
-
+    #if defined(NOFUSS_ARDUINOJSON_5_COMPATIBLE)
     StaticJsonBuffer<500> jsonBuffer;
     JsonObject& response = jsonBuffer.parseObject(payload);
-
     if (!response.success()) {
         _doCallback(NOFUSS_PARSE_ERROR);
         return false;
@@ -132,10 +131,29 @@ bool NoFUSSClientClass::_checkUpdates() {
         _doCallback(NOFUSS_UPTODATE);
         return false;
     }
-
     _newVersion = response.get<String>("version");
     _newFileSystem = response.get<String>("spiffs");
     _newFirmware = response.get<String>("firmware");
+
+    #else
+    StaticJsonDocument<500> response;
+    DeserializationError error = deserializeJson(response, payload);
+    if (error) {
+        _doCallback(NOFUSS_PARSE_ERROR);
+        return false;
+    }
+
+    if (response.size() == 0) {
+        _doCallback(NOFUSS_UPTODATE);
+        return false;
+    }
+    _newVersion = response["version"].as<String>();
+    _newFileSystem = response["spiffs"].as<String>();
+    _newFirmware = response["firmware"].as<String>();
+    #endif
+    
+
+    
 
     _doCallback(NOFUSS_UPDATING);
     return true;
